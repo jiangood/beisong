@@ -181,9 +181,19 @@ private fun CharLookupDialog(
         },
         text = {
             Column(modifier = Modifier.verticalScroll(scrollState)) {
-                info.readings.forEach { reading ->
-                    ReadingSection(reading)
-                    Spacer(Modifier.height(12.dp))
+                if (info.readings.isEmpty()) {
+                    Text(
+                        text = "未收录该字",
+                        fontSize = 16.sp,
+                        color = Color(0xFF999999),
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center
+                    )
+                } else {
+                    info.readings.forEach { reading ->
+                        ReadingSection(reading)
+                        Spacer(Modifier.height(12.dp))
+                    }
                 }
             }
         },

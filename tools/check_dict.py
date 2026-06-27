@@ -1,8 +1,12 @@
-import json
+import json, sys
+sys.stdout.reconfigure(encoding='utf-8')
 with open('D:/ws/beisong/app/src/main/assets/chinese_dict.json', 'r', encoding='utf-8') as f:
     data = json.load(f)
-for c in ['之', '其', '以', '也', '天', '道']:
+
+chars = ['徼', '妙', '常', '有', '欲', '以', '观', '其', '玄', '眇']
+for c in chars:
     if c in data:
-        entry = data[c]
-        print(f"\n=== {c} ===")
-        print(json.dumps(entry, ensure_ascii=False, indent=2)[:1500])
+        readings = data[c]['r']
+        print(f"YES {c}: {len(readings)} readings")
+    else:
+        print(f"NO  {c}: not in dictionary")

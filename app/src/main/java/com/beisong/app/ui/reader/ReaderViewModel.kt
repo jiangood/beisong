@@ -87,7 +87,13 @@ class ReaderViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun selectChar(char: String) {
-        _uiState.update { it.copy(isLookupMode = true, selectedChar = charDict.lookup(char)) }
+        val found = charDict.lookup(char)
+        _uiState.update {
+            it.copy(
+                isLookupMode = true,
+                selectedChar = found ?: CharInfo(char, emptyList())
+            )
+        }
     }
 
     fun clearSelection() {

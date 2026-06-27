@@ -7,7 +7,7 @@ import os
 OUTPUT = os.path.join(os.path.dirname(os.path.dirname(__file__)),
                       "app", "src", "main", "assets", "chinese_dict.json")
 
-url = "https://raw.githubusercontent.com/mapull/chinese-dictionary/main/character/common/char_common_detail.json"
+url = "https://raw.githubusercontent.com/mapull/chinese-dictionary/main/character/char_detail.json"
 print("Downloading...")
 data = urllib.request.urlopen(url, timeout=120).read()
 text = data.decode("utf-8")
