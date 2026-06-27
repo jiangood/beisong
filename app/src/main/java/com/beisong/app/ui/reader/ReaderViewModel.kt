@@ -111,4 +111,17 @@ class ReaderViewModel(application: Application) : AndroidViewModel(application) 
     fun clearSelection() {
         _uiState.update { it.copy(selectedChar = null, wordCandidates = emptyList()) }
     }
+
+    fun onWordCandidateClicked(word: String) {
+        val chars = word.filter { it in '\u4e00'..'\u9fff' || it in '\u3400'..'\u4dbf' }
+        if (chars.isNotEmpty()) {
+            val firstChar = chars.first().toString()
+            val found = charDict.lookup(firstChar)
+            _uiState.update {
+                it.copy(
+                    selectedChar = found ?: CharInfo(firstChar, emptyList())
+                )
+            }
+        }
+    }
 }

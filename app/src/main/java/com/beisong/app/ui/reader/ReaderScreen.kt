@@ -1,7 +1,6 @@
 package com.beisong.app.ui.reader
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
@@ -13,17 +12,21 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.unit.IntOffset
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.beisong.app.R
 import com.beisong.app.data.CharInfo
 import com.beisong.app.data.CharReading
 import com.beisong.app.data.CharDefinition
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -39,12 +42,20 @@ fun ReaderScreen(
     val uiState by viewModel.uiState.collectAsState()
     val currentText = uiState.segments.getOrElse(uiState.currentIndex) { "" }
     var textLayoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
+    var selectedChar by remember { mutableStateOf("") }
+    var showTranslateButton by remember { mutableStateOf(false) }
+    var translateButtonPos by remember { mutableStateOf(Offset.Zero) }
 
     if (uiState.selectedChar != null) {
         CharLookupDialog(
             info = uiState.selectedChar!!,
             candidates = uiState.wordCandidates,
-            onDismiss = { viewModel.clearSelection() }
+            onDismiss = {
+                viewModel.clearSelection()
+                selectedChar = ""
+                showTranslateButton = false
+            },
+            onWordClick = { viewModel.onWordCandidateClicked(it) }
         )
     }
 
@@ -108,7 +119,43 @@ fun ReaderScreen(
                         .verticalScroll(rememberScrollState()),
                     contentAlignment = Alignment.TopStart
                 ) {
-                    SelectionContainer {
+                    SelectionContainer(
+                        modifier = Modifier.pointerInput(currentText) {
+                            awaitPointerEventScope {
+                                while (true) {
+                                    val down = awaitFirstDown(
+                                        pass = PointerEventPass.Initial,
+                                        requireUnconsumed = false
+                                    )
+                                    val downPos = down.position
+                                    val downTime = System.nanoTime()
+
+                                    while (true) {
+                                        val event = awaitPointerEvent(PointerEventPass.Initial)
+                                        val change = event.changes.firstOrNull() ?: break
+                                        if (!change.pressed) break
+                                    }
+
+                                    val elapsed = (System.nanoTime() - downTime) / 1_000_000
+                                    if (elapsed < viewConfiguration.longPressTimeoutMillis) {
+                                        continue
+                                    }
+
+                                    val result = textLayoutResult ?: continue
+                                    val charOffset = result.getOffsetForPosition(downPos)
+                                    if (charOffset in currentText.indices) {
+                                        val rect = result.getBoundingBox(charOffset)
+                                        selectedChar = currentText[charOffset].toString()
+                                        showTranslateButton = true
+                                        translateButtonPos = Offset(
+                                            rect.center.x,
+                                            rect.bottom + 8.dp.toPx()
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    ) {
                         Text(
                             text = currentText,
                             color = Color(0xFF333333),
@@ -116,18 +163,30 @@ fun ReaderScreen(
                             lineHeight = 32.sp,
                             textAlign = TextAlign.Start,
                             onTextLayout = { textLayoutResult = it },
-                            modifier = Modifier.pointerInput(currentText) {
-                                detectTapGestures(
-                                    onLongPress = { offset ->
-                                        val result = textLayoutResult ?: return@detectTapGestures
-                                        val charOffset = result.getOffsetForPosition(offset)
-                                        if (charOffset in currentText.indices) {
-                                            viewModel.onTextSelected(currentText[charOffset].toString())
-                                        }
-                                    }
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                    if (showTranslateButton && selectedChar.isNotBlank()) {
+                        Box(
+                            modifier = Modifier
+                                .offset { IntOffset(translateButtonPos.x.roundToInt(), translateButtonPos.y.roundToInt()) }
+                        ) {
+                            Card(
+                                onClick = {
+                                    viewModel.onTextSelected(selectedChar)
+                                    showTranslateButton = false
+                                },
+                                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                                colors = CardDefaults.cardColors(containerColor = Color(0xFF333333))
+                            ) {
+                                Text(
+                                    text = "翻译",
+                                    fontSize = 14.sp,
+                                    color = Color.White,
+                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                                 )
                             }
-                        )
+                        }
                     }
                 }
             }
@@ -135,14 +194,13 @@ fun ReaderScreen(
     }
 }
 
-
-
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun CharLookupDialog(
     info: CharInfo,
     candidates: List<String>,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onWordClick: (String) -> Unit
 ) {
     val scrollState = rememberScrollState()
     AlertDialog(
@@ -187,7 +245,7 @@ private fun CharLookupDialog(
                     ) {
                         candidates.forEach { word ->
                             Surface(
-                                onClick = { },
+                                onClick = { onWordClick(word) },
                                 shape = MaterialTheme.shapes.small,
                                 color = Color(0xFFB8E0BB)
                             ) {
