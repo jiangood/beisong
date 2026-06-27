@@ -16,7 +16,6 @@ data class ReaderUiState(
     val fileName: String = "",
     val segments: List<String> = emptyList(),
     val currentIndex: Int = 0,
-    val fontSize: Float = 18f,
     val isLoading: Boolean = true,
     val error: String? = null
 )
@@ -60,9 +59,5 @@ class ReaderViewModel(application: Application) : AndroidViewModel(application) 
                 state.copy(currentIndex = state.currentIndex - 1)
             } else state
         }
-    }
-
-    fun setFontSize(size: Float) {
-        _uiState.update { it.copy(fontSize = size.coerceIn(14f, 32f)) }
     }
 }

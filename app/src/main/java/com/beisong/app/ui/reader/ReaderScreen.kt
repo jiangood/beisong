@@ -4,13 +4,14 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -33,10 +34,10 @@ fun ReaderScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(uiState.fileName) },
+                title = { Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { Text(uiState.fileName) } },
                 navigationIcon = {
-                    TextButton(onClick = onBack) {
-                        Text("< ${stringResource(R.string.back)}", color = Color(0xFF333333), fontSize = 14.sp)
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back), tint = Color(0xFF333333))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -49,10 +50,8 @@ fun ReaderScreen(
             ReaderBottomBar(
                 currentIndex = uiState.currentIndex,
                 totalSegments = uiState.segments.size,
-                fontSize = uiState.fontSize,
                 onPrev = { viewModel.prevSegment() },
-                onNext = { viewModel.nextSegment() },
-                onFontSizeChange = { viewModel.setFontSize(it) }
+                onNext = { viewModel.nextSegment() }
             )
         },
         containerColor = Color(0xFFC7EDCC)
@@ -95,8 +94,8 @@ fun ReaderScreen(
                     Text(
                         text = uiState.segments.getOrElse(uiState.currentIndex) { "" },
                         color = Color(0xFF333333),
-                        fontSize = uiState.fontSize.sp,
-                        lineHeight = (uiState.fontSize * 1.8).sp,
+                        fontSize = 18.sp,
+                        lineHeight = 32.sp,
                         textAlign = TextAlign.Start
                     )
                 }
@@ -109,73 +108,47 @@ fun ReaderScreen(
 private fun ReaderBottomBar(
     currentIndex: Int,
     totalSegments: Int,
-    fontSize: Float,
     onPrev: () -> Unit,
-    onNext: () -> Unit,
-    onFontSizeChange: (Float) -> Unit
+    onNext: () -> Unit
 ) {
     Surface(
         color = Color(0xFFB8E0BB),
-        tonalElevation = 2.dp
+        tonalElevation = 2.dp,
+        modifier = Modifier.navigationBarsPadding()
     ) {
-        Column(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
+            TextButton(
+                onClick = onPrev,
+                enabled = currentIndex > 0
             ) {
-                Text("A", color = Color(0xFF333333), fontSize = 12.sp)
-                Slider(
-                    value = fontSize,
-                    onValueChange = onFontSizeChange,
-                    valueRange = 14f..32f,
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(horizontal = 8.dp),
-                    colors = SliderDefaults.colors(
-                        thumbColor = Color(0xFF333333),
-                        activeTrackColor = Color(0xFF333333),
-                        inactiveTrackColor = Color(0xFFA8D8A8)
-                    )
-                )
-                Text("A", color = Color(0xFF333333), fontSize = 20.sp, fontWeight = FontWeight.Bold)
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                TextButton(
-                    onClick = onPrev,
-                    enabled = currentIndex > 0
-                ) {
-                    Text(
-                        "< ${stringResource(R.string.prev_segment)}",
-                        color = if (currentIndex > 0) Color(0xFF333333) else Color(0xFF999999),
-                        fontSize = 14.sp
-                    )
-                }
-
                 Text(
-                    text = stringResource(R.string.segment_info, currentIndex + 1, totalSegments),
-                    color = Color(0xFF333333),
+                    "< ${stringResource(R.string.prev_segment)}",
+                    color = if (currentIndex > 0) Color(0xFF333333) else Color(0xFF999999),
                     fontSize = 14.sp
                 )
+            }
 
-                TextButton(
-                    onClick = onNext,
-                    enabled = currentIndex < totalSegments - 1
-                ) {
-                    Text(
-                        "${stringResource(R.string.next_segment)} >",
-                        color = if (currentIndex < totalSegments - 1) Color(0xFF333333) else Color(0xFF999999),
-                        fontSize = 14.sp
-                    )
-                }
+            Text(
+                text = stringResource(R.string.segment_info, currentIndex + 1, totalSegments),
+                color = Color(0xFF333333),
+                fontSize = 14.sp
+            )
+
+            TextButton(
+                onClick = onNext,
+                enabled = currentIndex < totalSegments - 1
+            ) {
+                Text(
+                    "${stringResource(R.string.next_segment)} >",
+                    color = if (currentIndex < totalSegments - 1) Color(0xFF333333) else Color(0xFF999999),
+                    fontSize = 14.sp
+                )
             }
         }
     }
