@@ -19,6 +19,8 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.beisong.app.R
 import com.beisong.app.data.CharInfo
+import com.beisong.app.data.CharReading
+import com.beisong.app.data.CharDefinition
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -164,6 +166,7 @@ private fun CharLookupDialog(
     info: CharInfo,
     onDismiss: () -> Unit
 ) {
+    val scrollState = rememberScrollState()
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = Color(0xFFC7EDCC),
@@ -177,21 +180,10 @@ private fun CharLookupDialog(
             )
         },
         text = {
-            Column {
-                if (info.pinyin.isNotBlank()) {
-                    Text(
-                        text = info.pinyin,
-                        fontSize = 20.sp,
-                        color = Color(0xFF555555)
-                    )
-                    Spacer(Modifier.height(8.dp))
-                }
-                if (info.meaning.isNotBlank()) {
-                    Text(
-                        text = info.meaning,
-                        fontSize = 16.sp,
-                        color = Color(0xFF333333)
-                    )
+            Column(modifier = Modifier.verticalScroll(scrollState)) {
+                info.readings.forEach { reading ->
+                    ReadingSection(reading)
+                    Spacer(Modifier.height(12.dp))
                 }
             }
         },
@@ -201,6 +193,40 @@ private fun CharLookupDialog(
             }
         }
     )
+}
+
+@Composable
+private fun ReadingSection(reading: CharReading) {
+    Text(
+        text = "【${reading.pinyin}】",
+        fontSize = 18.sp,
+        color = Color(0xFF555555)
+    )
+    Spacer(Modifier.height(4.dp))
+    reading.definitions.forEachIndexed { index, def ->
+        Text(
+            text = "${index + 1}. ${def.meaning}",
+            fontSize = 15.sp,
+            color = Color(0xFF333333),
+            lineHeight = 24.sp
+        )
+        def.details.forEach { detail ->
+            val detailText = if (detail.book.isNotBlank()) {
+                "  · ${detail.text} —《${detail.book}》"
+            } else {
+                "  · ${detail.text}"
+            }
+            Text(
+                text = detailText,
+                fontSize = 13.sp,
+                color = Color(0xFF666666),
+                lineHeight = 20.sp
+            )
+        }
+        if (index < reading.definitions.size - 1) {
+            Spacer(Modifier.height(6.dp))
+        }
+    }
 }
 
 @Composable

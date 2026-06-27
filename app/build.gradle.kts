@@ -12,8 +12,8 @@ android {
         applicationId = "com.beisong.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 7
-        versionName = "1.5"
+        versionCode = 8
+        versionName = "1.6"
     }
 
     signingConfigs {
