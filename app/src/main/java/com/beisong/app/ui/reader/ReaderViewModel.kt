@@ -22,7 +22,7 @@ data class ReaderUiState(
     val currentIndex: Int = 0,
     val isLoading: Boolean = true,
     val error: String? = null,
-    val isLookupMode: Boolean = false,
+    val wordCandidates: List<String> = emptyList(),
     val selectedChar: CharInfo? = null
 )
 
@@ -67,7 +67,7 @@ class ReaderViewModel(application: Application) : AndroidViewModel(application) 
             if (state.currentIndex < state.segments.size - 1) {
                 val newIndex = state.currentIndex + 1
                 history.recordProgress(state.rawFileName, newIndex)
-                state.copy(currentIndex = newIndex, selectedChar = null)
+                state.copy(currentIndex = newIndex, selectedChar = null, wordCandidates = emptyList())
             } else state
         }
     }
@@ -77,26 +77,38 @@ class ReaderViewModel(application: Application) : AndroidViewModel(application) 
             if (state.currentIndex > 0) {
                 val newIndex = state.currentIndex - 1
                 history.recordProgress(state.rawFileName, newIndex)
-                state.copy(currentIndex = newIndex, selectedChar = null)
+                state.copy(currentIndex = newIndex, selectedChar = null, wordCandidates = emptyList())
             } else state
         }
     }
 
-    fun toggleLookupMode() {
-        _uiState.update { it.copy(isLookupMode = !it.isLookupMode, selectedChar = null) }
-    }
-
-    fun selectChar(char: String) {
+    fun onTextSelected(text: String) {
+        val char = text.firstOrNull { it in '\u4e00'..'\u9fff' || it in '\u3400'..'\u4dbf' }?.toString() ?: return
         val found = charDict.lookup(char)
+        val segment = _uiState.value.segments.getOrElse(_uiState.value.currentIndex) { "" }
+        val idx = segment.indexOf(char)
+        val candidates = mutableListOf<String>()
+        if (idx >= 0) {
+            if (idx + 1 < segment.length && segment[idx + 1] in '\u4e00'..'\u9fff') {
+                candidates.add(char + segment[idx + 1])
+            }
+            if (idx > 0 && segment[idx - 1] in '\u4e00'..'\u9fff') {
+                candidates.add(segment[idx - 1].toString() + char)
+            }
+            if (idx > 0 && idx + 1 < segment.length &&
+                segment[idx - 1] in '\u4e00'..'\u9fff' && segment[idx + 1] in '\u4e00'..'\u9fff') {
+                candidates.add(segment[idx - 1].toString() + char + segment[idx + 1])
+            }
+        }
         _uiState.update {
             it.copy(
-                isLookupMode = true,
+                wordCandidates = candidates,
                 selectedChar = found ?: CharInfo(char, emptyList())
             )
         }
     }
 
     fun clearSelection() {
-        _uiState.update { it.copy(selectedChar = null) }
+        _uiState.update { it.copy(selectedChar = null, wordCandidates = emptyList()) }
     }
 }

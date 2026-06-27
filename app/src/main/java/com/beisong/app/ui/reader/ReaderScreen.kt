@@ -1,9 +1,10 @@
 package com.beisong.app.ui.reader
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -12,7 +13,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -35,10 +38,12 @@ fun ReaderScreen(
 
     val uiState by viewModel.uiState.collectAsState()
     val currentText = uiState.segments.getOrElse(uiState.currentIndex) { "" }
+    var textLayoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
 
     if (uiState.selectedChar != null) {
         CharLookupDialog(
             info = uiState.selectedChar!!,
+            candidates = uiState.wordCandidates,
             onDismiss = { viewModel.clearSelection() }
         )
     }
@@ -62,10 +67,8 @@ fun ReaderScreen(
             ReaderBottomBar(
                 currentIndex = uiState.currentIndex,
                 totalSegments = uiState.segments.size,
-                isLookupMode = uiState.isLookupMode,
                 onPrev = { viewModel.prevSegment() },
-                onNext = { viewModel.nextSegment() },
-                onToggleLookup = { viewModel.toggleLookupMode() }
+                onNext = { viewModel.nextSegment() }
             )
         },
         containerColor = Color(0xFFC7EDCC)
@@ -95,17 +98,6 @@ fun ReaderScreen(
                     Text(stringResource(R.string.no_content), color = Color(0xFF666666), fontSize = 16.sp)
                 }
             }
-            uiState.isLookupMode -> {
-                LookupGrid(
-                    text = currentText,
-                    onCharClick = { viewModel.selectChar(it.toString()) },
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(padding)
-                        .verticalScroll(rememberScrollState())
-                        .padding(16.dp)
-                )
-            }
             else -> {
                 Box(
                     modifier = Modifier
@@ -116,54 +108,40 @@ fun ReaderScreen(
                         .verticalScroll(rememberScrollState()),
                     contentAlignment = Alignment.TopStart
                 ) {
-                    Text(
-                        text = currentText,
-                        color = Color(0xFF333333),
-                        fontSize = 18.sp,
-                        lineHeight = 32.sp,
-                        textAlign = TextAlign.Start
-                    )
+                    SelectionContainer {
+                        Text(
+                            text = currentText,
+                            color = Color(0xFF333333),
+                            fontSize = 18.sp,
+                            lineHeight = 32.sp,
+                            textAlign = TextAlign.Start,
+                            onTextLayout = { textLayoutResult = it },
+                            modifier = Modifier.pointerInput(currentText) {
+                                detectTapGestures(
+                                    onLongPress = { offset ->
+                                        val result = textLayoutResult ?: return@detectTapGestures
+                                        val charOffset = result.getOffsetForPosition(offset)
+                                        if (charOffset in currentText.indices) {
+                                            viewModel.onTextSelected(currentText[charOffset].toString())
+                                        }
+                                    }
+                                )
+                            }
+                        )
+                    }
                 }
             }
         }
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun LookupGrid(
-    text: String,
-    onCharClick: (Char) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    FlowRow(
-        modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp)
-    ) {
-        for (char in text) {
-            if (char.isWhitespace() || char.isISOControl()) continue
-            Surface(
-                onClick = { onCharClick(char) },
-                shape = MaterialTheme.shapes.small,
-                color = Color(0xFFB8E0BB),
-                modifier = Modifier.widthIn(min = 48.dp)
-            ) {
-                Text(
-                    text = char.toString(),
-                    color = Color(0xFF333333),
-                    fontSize = 18.sp,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                )
-            }
-        }
-    }
-}
 
+
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun CharLookupDialog(
     info: CharInfo,
+    candidates: List<String>,
     onDismiss: () -> Unit
 ) {
     val scrollState = rememberScrollState()
@@ -173,7 +151,7 @@ private fun CharLookupDialog(
         title = {
             Text(
                 text = info.character,
-                fontSize = 36.sp,
+                fontSize = 24.sp,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth(),
                 color = Color(0xFF333333)
@@ -184,7 +162,7 @@ private fun CharLookupDialog(
                 if (info.readings.isEmpty()) {
                     Text(
                         text = "未收录该字",
-                        fontSize = 16.sp,
+                        fontSize = 14.sp,
                         color = Color(0xFF999999),
                         modifier = Modifier.fillMaxWidth(),
                         textAlign = TextAlign.Center
@@ -192,7 +170,35 @@ private fun CharLookupDialog(
                 } else {
                     info.readings.forEach { reading ->
                         ReadingSection(reading)
-                        Spacer(Modifier.height(12.dp))
+                        Spacer(Modifier.height(10.dp))
+                    }
+                }
+                if (candidates.isNotEmpty()) {
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = "词组",
+                        fontSize = 14.sp,
+                        color = Color(0xFF555555)
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        candidates.forEach { word ->
+                            Surface(
+                                onClick = { },
+                                shape = MaterialTheme.shapes.small,
+                                color = Color(0xFFB8E0BB)
+                            ) {
+                                Text(
+                                    text = word,
+                                    fontSize = 14.sp,
+                                    color = Color(0xFF333333),
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -209,16 +215,16 @@ private fun CharLookupDialog(
 private fun ReadingSection(reading: CharReading) {
     Text(
         text = "【${reading.pinyin}】",
-        fontSize = 18.sp,
+        fontSize = 16.sp,
         color = Color(0xFF555555)
     )
     Spacer(Modifier.height(4.dp))
     reading.definitions.forEachIndexed { index, def ->
         Text(
             text = "${index + 1}. ${def.meaning}",
-            fontSize = 15.sp,
+            fontSize = 14.sp,
             color = Color(0xFF333333),
-            lineHeight = 24.sp
+            lineHeight = 22.sp
         )
         def.details.forEach { detail ->
             val detailText = if (detail.book.isNotBlank()) {
@@ -228,9 +234,9 @@ private fun ReadingSection(reading: CharReading) {
             }
             Text(
                 text = detailText,
-                fontSize = 13.sp,
+                fontSize = 12.sp,
                 color = Color(0xFF666666),
-                lineHeight = 20.sp
+                lineHeight = 18.sp
             )
         }
         if (index < reading.definitions.size - 1) {
@@ -243,10 +249,8 @@ private fun ReadingSection(reading: CharReading) {
 private fun ReaderBottomBar(
     currentIndex: Int,
     totalSegments: Int,
-    isLookupMode: Boolean,
     onPrev: () -> Unit,
-    onNext: () -> Unit,
-    onToggleLookup: () -> Unit
+    onNext: () -> Unit
 ) {
     Surface(
         color = Color(0xFFB8E0BB),
@@ -271,21 +275,11 @@ private fun ReaderBottomBar(
                 )
             }
 
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = stringResource(R.string.segment_info, currentIndex + 1, totalSegments),
-                    color = Color(0xFF333333),
-                    fontSize = 14.sp
-                )
-                Spacer(Modifier.width(12.dp))
-                TextButton(onClick = onToggleLookup) {
-                    Text(
-                        text = if (isLookupMode) stringResource(R.string.read_mode) else stringResource(R.string.lookup_mode),
-                        color = Color(0xFF333333),
-                        fontSize = 14.sp
-                    )
-                }
-            }
+            Text(
+                text = stringResource(R.string.segment_info, currentIndex + 1, totalSegments),
+                color = Color(0xFF333333),
+                fontSize = 14.sp
+            )
 
             TextButton(
                 onClick = onNext,
