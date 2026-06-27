@@ -7,7 +7,9 @@ import com.beisong.app.data.FileRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 data class FileListUiState(
     val files: List<Pair<String, String>> = emptyList(),
@@ -29,8 +31,10 @@ class FileListViewModel(application: Application) : AndroidViewModel(application
     private fun loadFiles() {
         viewModelScope.launch {
             try {
-                val files = repository.listTextFiles().map { fileName ->
-                    fileName to repository.displayName(fileName)
+                val files = withContext(Dispatchers.IO) {
+                    repository.listTextFiles().map { fileName ->
+                        fileName to repository.displayName(fileName)
+                    }
                 }
                 _uiState.value = FileListUiState(files = files, isLoading = false)
             } catch (e: Exception) {

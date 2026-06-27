@@ -8,7 +8,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 data class ReaderUiState(
     val fileName: String = "",
@@ -29,7 +31,9 @@ class ReaderViewModel(application: Application) : AndroidViewModel(application) 
     fun loadFile(fileName: String) {
         viewModelScope.launch {
             try {
-                val segments = repository.loadSegments(fileName)
+                val segments = withContext(Dispatchers.IO) {
+                    repository.loadSegments(fileName)
+                }
                 _uiState.value = ReaderUiState(
                     fileName = repository.displayName(fileName),
                     segments = segments,
