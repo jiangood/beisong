@@ -71,7 +71,7 @@ fun ReaderScreen(
                     modifier = Modifier.fillMaxSize().padding(padding),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(uiState.error, color = Color(0xFF666666), fontSize = 16.sp)
+                    Text(uiState.error ?: "", color = Color(0xFF666666), fontSize = 16.sp)
                 }
             }
             uiState.segments.isEmpty() -> {
