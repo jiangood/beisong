@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="eye_green_bg">#C7EDCC</color>
+    <color name="eye_green_surface">#B8E0BB</color>
+    <color name="text_primary">#333333</color>
+    <color name="text_secondary">#666666</color>
+</resources>

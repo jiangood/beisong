@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">背诵</string>
+    <string name="no_content">暂无内容</string>
+    <string name="no_texts">暂无文本</string>
+    <string name="prev_segment">上一段</string>
+    <string name="next_segment">下一段</string>
+    <string name="segment_info">第 %1$d / %2$d 段</string>
+</resources>
