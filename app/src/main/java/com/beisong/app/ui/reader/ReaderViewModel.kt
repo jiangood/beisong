@@ -3,6 +3,8 @@ package com.beisong.app.ui.reader
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.beisong.app.data.CharDictionary
+import com.beisong.app.data.CharInfo
 import com.beisong.app.data.FileRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -17,15 +19,24 @@ data class ReaderUiState(
     val segments: List<String> = emptyList(),
     val currentIndex: Int = 0,
     val isLoading: Boolean = true,
-    val error: String? = null
+    val error: String? = null,
+    val isLookupMode: Boolean = false,
+    val selectedChar: CharInfo? = null
 )
 
 class ReaderViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository = FileRepository(application)
+    private val charDict = CharDictionary(application)
 
     private val _uiState = MutableStateFlow(ReaderUiState())
     val uiState: StateFlow<ReaderUiState> = _uiState.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            charDict.load()
+        }
+    }
 
     fun loadFile(fileName: String) {
         viewModelScope.launch {
@@ -48,7 +59,7 @@ class ReaderViewModel(application: Application) : AndroidViewModel(application) 
     fun nextSegment() {
         _uiState.update { state ->
             if (state.currentIndex < state.segments.size - 1) {
-                state.copy(currentIndex = state.currentIndex + 1)
+                state.copy(currentIndex = state.currentIndex + 1, selectedChar = null)
             } else state
         }
     }
@@ -56,8 +67,20 @@ class ReaderViewModel(application: Application) : AndroidViewModel(application) 
     fun prevSegment() {
         _uiState.update { state ->
             if (state.currentIndex > 0) {
-                state.copy(currentIndex = state.currentIndex - 1)
+                state.copy(currentIndex = state.currentIndex - 1, selectedChar = null)
             } else state
         }
+    }
+
+    fun toggleLookupMode() {
+        _uiState.update { it.copy(isLookupMode = !it.isLookupMode, selectedChar = null) }
+    }
+
+    fun selectChar(char: String) {
+        _uiState.update { it.copy(isLookupMode = true, selectedChar = charDict.lookup(char)) }
+    }
+
+    fun clearSelection() {
+        _uiState.update { it.copy(selectedChar = null) }
     }
 }
