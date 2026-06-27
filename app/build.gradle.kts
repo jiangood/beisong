@@ -4,10 +4,6 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
-base {
-    archivesName = "beisong"
-}
-
 android {
     namespace = "com.beisong.app"
     compileSdk = 36
@@ -16,8 +12,8 @@ android {
         applicationId = "com.beisong.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 5
-        versionName = "1.4"
+        versionCode = 6
+        versionName = "1.4.1"
     }
 
     signingConfigs {
@@ -49,6 +45,10 @@ android {
     buildFeatures {
         compose = true
     }
+}
+
+base {
+    archivesName = "beisong-${android.defaultConfig.versionName}"
 }
 
 dependencies {

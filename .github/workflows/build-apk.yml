@@ -69,5 +69,5 @@ jobs:
 
       - uses: softprops/action-gh-release@v2
         with:
-          files: app/build/outputs/apk/release/beisong-release.apk
+          files: app/build/outputs/apk/release/beisong-*.apk
           generate_release_notes: true
