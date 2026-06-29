@@ -3,8 +3,6 @@ package com.beisong.app.ui.reader
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.beisong.app.data.CharDictionary
-import com.beisong.app.data.CharInfo
 import com.beisong.app.data.FileRepository
 import com.beisong.app.data.ReadingHistory
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,25 +19,16 @@ data class ReaderUiState(
     val segments: List<String> = emptyList(),
     val currentIndex: Int = 0,
     val isLoading: Boolean = true,
-    val error: String? = null,
-    val wordCandidates: List<String> = emptyList(),
-    val selectedChar: CharInfo? = null
+    val error: String? = null
 )
 
 class ReaderViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository = FileRepository(application)
-    private val charDict = CharDictionary(application)
     private val history = ReadingHistory(application)
 
     private val _uiState = MutableStateFlow(ReaderUiState())
     val uiState: StateFlow<ReaderUiState> = _uiState.asStateFlow()
-
-    init {
-        viewModelScope.launch {
-            charDict.load()
-        }
-    }
 
     fun loadFile(fileName: String) {
         viewModelScope.launch {
@@ -67,7 +56,7 @@ class ReaderViewModel(application: Application) : AndroidViewModel(application) 
             if (state.currentIndex < state.segments.size - 1) {
                 val newIndex = state.currentIndex + 1
                 history.recordProgress(state.rawFileName, newIndex)
-                state.copy(currentIndex = newIndex, selectedChar = null, wordCandidates = emptyList())
+                state.copy(currentIndex = newIndex)
             } else state
         }
     }
@@ -77,51 +66,8 @@ class ReaderViewModel(application: Application) : AndroidViewModel(application) 
             if (state.currentIndex > 0) {
                 val newIndex = state.currentIndex - 1
                 history.recordProgress(state.rawFileName, newIndex)
-                state.copy(currentIndex = newIndex, selectedChar = null, wordCandidates = emptyList())
+                state.copy(currentIndex = newIndex)
             } else state
-        }
-    }
-
-    fun onTextSelected(text: String) {
-        val char = text.firstOrNull { it in '\u4e00'..'\u9fff' || it in '\u3400'..'\u4dbf' }?.toString() ?: return
-        val found = charDict.lookup(char)
-        val segment = _uiState.value.segments.getOrElse(_uiState.value.currentIndex) { "" }
-        val idx = segment.indexOf(char)
-        val candidates = mutableListOf<String>()
-        if (idx >= 0) {
-            if (idx + 1 < segment.length && segment[idx + 1] in '\u4e00'..'\u9fff') {
-                candidates.add(char + segment[idx + 1])
-            }
-            if (idx > 0 && segment[idx - 1] in '\u4e00'..'\u9fff') {
-                candidates.add(segment[idx - 1].toString() + char)
-            }
-            if (idx > 0 && idx + 1 < segment.length &&
-                segment[idx - 1] in '\u4e00'..'\u9fff' && segment[idx + 1] in '\u4e00'..'\u9fff') {
-                candidates.add(segment[idx - 1].toString() + char + segment[idx + 1])
-            }
-        }
-        _uiState.update {
-            it.copy(
-                wordCandidates = candidates,
-                selectedChar = found ?: CharInfo(char, emptyList())
-            )
-        }
-    }
-
-    fun clearSelection() {
-        _uiState.update { it.copy(selectedChar = null, wordCandidates = emptyList()) }
-    }
-
-    fun onWordCandidateClicked(word: String) {
-        val chars = word.filter { it in '\u4e00'..'\u9fff' || it in '\u3400'..'\u4dbf' }
-        if (chars.isNotEmpty()) {
-            val firstChar = chars.first().toString()
-            val found = charDict.lookup(firstChar)
-            _uiState.update {
-                it.copy(
-                    selectedChar = found ?: CharInfo(firstChar, emptyList())
-                )
-            }
         }
     }
 }
