@@ -1,6 +1,7 @@
 package com.beisong.app.ui.reader
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
@@ -12,7 +13,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextLayoutResult
@@ -119,43 +119,7 @@ fun ReaderScreen(
                         .verticalScroll(rememberScrollState()),
                     contentAlignment = Alignment.TopStart
                 ) {
-                    SelectionContainer(
-                        modifier = Modifier.pointerInput(currentText) {
-                            awaitPointerEventScope {
-                                while (true) {
-                                    val down = awaitFirstDown(
-                                        pass = PointerEventPass.Initial,
-                                        requireUnconsumed = false
-                                    )
-                                    val downPos = down.position
-                                    val downTime = System.nanoTime()
-
-                                    while (true) {
-                                        val event = awaitPointerEvent(PointerEventPass.Initial)
-                                        val change = event.changes.firstOrNull() ?: break
-                                        if (!change.pressed) break
-                                    }
-
-                                    val elapsed = (System.nanoTime() - downTime) / 1_000_000
-                                    if (elapsed < viewConfiguration.longPressTimeoutMillis) {
-                                        continue
-                                    }
-
-                                    val result = textLayoutResult ?: continue
-                                    val charOffset = result.getOffsetForPosition(downPos)
-                                    if (charOffset in currentText.indices) {
-                                        val rect = result.getBoundingBox(charOffset)
-                                        selectedChar = currentText[charOffset].toString()
-                                        showTranslateButton = true
-                                        translateButtonPos = Offset(
-                                            rect.center.x,
-                                            rect.bottom + 8.dp.toPx()
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    ) {
+                    SelectionContainer {
                         Text(
                             text = currentText,
                             color = Color(0xFF333333),
@@ -163,7 +127,25 @@ fun ReaderScreen(
                             lineHeight = 32.sp,
                             textAlign = TextAlign.Start,
                             onTextLayout = { textLayoutResult = it },
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .pointerInput(currentText) {
+                                    detectTapGestures(
+                                        onLongPress = { offset ->
+                                            val result = textLayoutResult ?: return@detectTapGestures
+                                            val charOffset = result.getOffsetForPosition(offset)
+                                            if (charOffset in currentText.indices) {
+                                                val rect = result.getBoundingBox(charOffset)
+                                                selectedChar = currentText[charOffset].toString()
+                                                showTranslateButton = true
+                                                translateButtonPos = Offset(
+                                                    rect.center.x,
+                                                    rect.bottom + 8.dp.toPx()
+                                                )
+                                            }
+                                        }
+                                    )
+                                }
                         )
                     }
                     if (showTranslateButton && selectedChar.isNotBlank()) {
